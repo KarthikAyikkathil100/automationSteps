@@ -1,4 +1,4 @@
-const responses = require('@Helpers/responses.js');
+const { getCloudStorageClient } = require('@Helpers/index.js')
 const {dynamoConnection} = require('@AwsHelpers/DynamoDB/index.js')
 // const { axios } = requie('@Helpers/index.js')
 const https = require('https'); // Use `http` for non-https URLs
@@ -50,20 +50,24 @@ exports.handler = handler;
 // 4) Call the Google Video Intelligence API to initiate the text blur
 async function handleRoute(routeId) {
   try {
-    const routeData = await getRouteDetails();
+    console.log('Finding route => ', routeId)
+    const routeData = await getRouteDetails(routeId);
     if (!routeId) {
       throw new Error('Route not found')
     }
-    console.log('Route data found')
+    console.log('Route data found => ', routeData)
 
     const videoUrl = routeData?.videoURL;
-    if (videoUrl) {
+    if (!videoUrl) {
       throw new Error('Video url not found')
     }
     console.log('Route data found')
 
     await downloadFileFromUrl(videoUrl)
     console.log('Video downloaded successfully')
+
+    const fileName = path.basename(videoUrl);
+    await uploadVideoToGCS(`/tmp/${fileName}`, ' rtme-videos', fileName)
     return "Success"
   } catch (e) {
     console.log('Error while handling route')
@@ -76,7 +80,7 @@ async function handleRoute(routeId) {
 async function getRouteDetails(routeId) {
   try {
     const routeParams = {
-      TableName: getTableName(constants.TABLES.ROUTE),
+      TableName: 'dev-Routes',
       Key: {
         id: routeId,
       },
@@ -92,6 +96,45 @@ async function getRouteDetails(routeId) {
     return null
   }
 }
+
+async function uploadVideoToGCS(localFilePath, bucketName, destinationPath) {
+  try {
+      // Instantiate a Google Cloud Storage client
+    const storage = await getCloudStorageClient()
+    if (!storage) {
+      throw new Error('Error while initialising the storage')
+    }
+
+    // Reference to the GCS bucket
+    const bucket = storage.bucket(bucketName);
+
+    // Reference to the destination file in GCS
+    const file = bucket.file(destinationPath);
+
+    return new Promise((resolve, reject) => {
+      // Create a stream to upload the file to GCS
+      fs.createReadStream(localFilePath)
+        .pipe(file.createWriteStream({
+          resumable: true, // Enable resumable uploads for large files
+          contentType: 'video/mp4', // Set content type (adjust for other file types)
+        }))
+        .on('finish', () => {
+          // When upload is finished, return the URL of the uploaded file
+          const fileUrl = `https://storage.googleapis.com/${bucketName}/${destinationPath}`;
+          console.log(`File uploaded to ${fileUrl}`);
+          resolve(fileUrl); // Return the URL of the uploaded file
+        })
+        .on('error', (err) => {
+          console.error('Error uploading video:', err);
+          reject(err); // Reject with the error
+        });
+    }); 
+  } catch (e) {
+    console.log('Error while uploading to GCS');
+    return null
+  }
+}
+
 
 async function downloadFileFromUrl(videoUrl) {
   // Extract the file name from the URL (e.g., "video.mp4")
