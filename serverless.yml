@@ -88,3 +88,29 @@ functions:
       Application: ${self:custom.APPLICATION}
     layers:
       - !Ref UtilsLayerLambdaLayer # The name is `${layerName}LambdaLayer`, the string "LambdaLayer" has to be appended as per docs
+  CheckVideoIntelligenceStatus:
+    name: ${self:custom.STAGE}-CheckVideoIntelligenceStatus
+    runtime: nodejs18.x
+    handler: './controllers/check_job_status.handler'
+    role: 
+      Fn::Sub:
+        - ${ARN}
+        - ARN: ${self:custom.ROLES.TESTROLE}
+    package:
+      patterns:
+        - 'controllers/**'
+        - 'layers/**'
+        - 'services/*'
+        - '!layers/utils/nodejs/node18/node_modules/@AwsHelpers/node_modules/**'
+        - '!layers/utils/nodejs/node18/node_modules/@Helpers/node_modules/**'
+    events:
+      - http:
+          path: '/check-status'
+          method: 'post'
+          cors: true
+    environment:
+      Stage: ${self:custom.STAGE}
+      Region: ${self:custom.REGION}
+      Application: ${self:custom.APPLICATION}
+    layers:
+      - !Ref UtilsLayerLambdaLayer 
