@@ -2,3 +2,6 @@
 # Lambda layers
 layers/utils/nodejs/node18/node_modules/@AwsHelpers/node_modules
 layers/utils/nodejs/node18/node_modules/@Helpers/node_modules
+
+images/
+test.js
