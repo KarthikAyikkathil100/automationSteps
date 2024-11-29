@@ -185,14 +185,17 @@ async function submitTextDetectionjob(bucketName, fileName) {
       throw new Error('VideoInteligence API could not initialise')
     }
     const inputFileUri = `gs://${bucketName}/${fileName}`
+    const outputUri = `gs://${bucketName}/${fileName}.json`
     const textTracking = {
-        inputUri: inputFileUri,
-        features: ['TEXT_DETECTION']
+      inputUri: inputFileUri,
+      features: ['TEXT_DETECTION'],
+      outputUri,
     }
     
     // Perform the face detection request
     const [operation] = await client.annotateVideo(textTracking);
     console.log('Text detection initiated, jobId => ', operation?.name)
+    console.log('The output json will be stored in => ', outputUri)
     return operation?.name
   } catch (e) {
     console.log('Error while submiting text blur job')
