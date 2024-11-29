@@ -1,0 +1,42 @@
+name: Deployment Workflow
+
+on:
+  push:
+    branches:
+      - development
+
+jobs:
+  deploy_development:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/development' # Only run this job on the development branch
+    timeout-minutes: 7
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install Serverless Framework
+        run: npm install -g serverless@3.38.0
+
+      - name: Echo Serverless Version
+        run: |
+          sls_version=$(sls -v)
+          echo "Serverless Framework Version: $sls_version"
+
+      - name: Install Lambda layer AWS dependencies
+        run: |
+          cd layers/utils/nodejs/node18/node_modules/@AwsHelpers
+          npm install
+
+      - name: Install Lambda layer Helpers dependencies
+        run: |
+          cd layers/utils/nodejs/node18/node_modules/@Helpers
+          npm install
+      
+      - name: Deploy
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET }}
+          KSM_KEY: ${{ secrets.KMS_KEY }}
+        run: |
+          serverless config credentials --provider aws --key $AWS_ACCESS_KEY_ID --secret $AWS_SECRET_ACCESS_KEY -o
+          sls deploy --stage dev
