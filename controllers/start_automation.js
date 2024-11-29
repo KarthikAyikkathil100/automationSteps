@@ -1,6 +1,6 @@
 const responses = require('@Helpers/responses');
 
-const { getCloudStorageClient } = require('@Helpers/index.js')
+const { getCloudStorageClient, getVideoIntelligenceClient } = require('@Helpers/index.js')
 const {dynamoConnection} = require('@AwsHelpers/DynamoDB/index.js')
 // const { axios } = requie('@Helpers/index.js')
 const https = require('https'); // Use `http` for non-https URLs
@@ -69,7 +69,11 @@ async function handleRoute(routeId) {
     console.log('Video downloaded successfully')
 
     const fileName = path.basename(videoUrl);
-    await uploadVideoToGCS(`/tmp/${fileName}`, ' rtme-videos', fileName)
+    await uploadVideoToGCS(`/tmp/${fileName}`, 'rtme-videos', fileName)
+    const jobId = await submitTextDetectionjob('rtme-videos', fileName)
+    if (!jobId) {
+      throw new Error('Job id not found')
+    }
     return "Success"
   } catch (e) {
     console.log('Error while handling route')
@@ -172,4 +176,27 @@ async function downloadFileFromUrl(videoUrl) {
       fs.unlink(localFilePath, () => reject(err)); // Delete the file if an error occurs
     });
   });
+}
+
+async function submitTextDetectionjob(bucketName, fileName) {
+  try {
+    const client = await getVideoIntelligenceClient('/automation/google/creds')
+    if (!client) {
+      throw new Error('VideoInteligence API could not initialise')
+    }
+    const inputFileUri = `gs://${bucketName}/${fileName}`
+    const textTracking = {
+        inputUri: inputFileUri,
+        features: ['TEXT_DETECTION']
+    }
+    
+    // Perform the face detection request
+    const [operation] = await client.annotateVideo(textTracking);
+    console.log('Text detection initiated, jobId => ', operation?.name)
+    return operation?.name
+  } catch (e) {
+    console.log('Error while submiting text blur job')
+    console.error(e)
+    return null
+  }
 }
