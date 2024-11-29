@@ -102,7 +102,7 @@ async function getRouteDetails(routeId) {
 async function uploadVideoToGCS(localFilePath, bucketName, destinationPath) {
   try {
       // Instantiate a Google Cloud Storage client
-    const storage = await getCloudStorageClient()
+    const storage = await getCloudStorageClient('/automation/google/creds')
     if (!storage) {
       throw new Error('Error while initialising the storage')
     }
