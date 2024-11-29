@@ -23,7 +23,7 @@ custom:
   ROUTE_TABLE: 'Routes'
   BUCKET: 'media.demo.test'
   ROLES: 
-    TESTROLE: ${ssm:/automation/testrole}
+    TESTROLE: ${ssm:/automation/testrole/role}
 
 layers:
   UtilsLayer:
