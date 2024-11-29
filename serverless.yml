@@ -22,7 +22,8 @@ custom:
   APPLICATION: 'Automation'
   ROUTE_TABLE: 'Routes'
   BUCKET: 'media.demo.test'
-  TEST_ROLE: ${ssm:/automation/testrole}
+  ROLES: 
+    TEST_ROLE: ${ssm:/automation/testrole}
 
 
 layers:
@@ -63,7 +64,7 @@ functions:
     name: ${self:custom.STAGE}-RouteSubmitForAutomation
     runtime: nodejs18.x
     handler: './controllers/start_automation.handler'
-    role: ${self:custom.TEST_ROLE}
+    role: ${self:custom.ROLES.TEST_ROLE}
     package:
       patterns:
         - 'controllers/**'
