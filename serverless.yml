@@ -114,7 +114,10 @@ resources:
             ErrorHandleFN:
               Type: 'Pass'
               End: true
-            
+      RoleArn: 
+        Fn::Sub:
+          - ${ARN}
+          - ARN: ${self:custom.ROLES.TESTROLE}
 
 
 functions:
