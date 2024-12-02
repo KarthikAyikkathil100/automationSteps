@@ -8,7 +8,7 @@ const fs = require('fs');
 const path = require('path');
 
 // const axios = require('axios')
-
+// TODO: Delte the file from local system
 const handler = async (event, context, callback) => {
   console.log('event => ', event);
   try {

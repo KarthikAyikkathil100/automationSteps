@@ -1,7 +1,7 @@
 const responses = require('@Helpers/responses');
 const { uploadFile } = require('@AwsHelpers/S3/index.js')
 const { dynamoConnection } = require('@AwsHelpers/DynamoDB/index.js')
-
+const { getCloudStorageClient, getVideoIntelligenceClient } = require('@Helpers/index.js')
 // TODO: Delte the file from local system
 const handler = async (event, context, callback) => {
     try {
@@ -61,6 +61,19 @@ const handler = async (event, context, callback) => {
             callback,
             messages.INTERNAL_SERVER_ERROR
           );
+    }
+}
+
+async function downloadFileFromGCS(bucketName, fileName, destFileName) {
+    try {
+        const options = {
+            destination: destFileName,
+        };
+        const storage = await getCloudStorageClient('/automation/google/creds')
+        // Downloads the file and store it locally (configured in 'options')
+        await storage.bucket(bucketName).file(fileName).download(options)
+    } catch (e) {
+        throw e;
     }
 }
 
