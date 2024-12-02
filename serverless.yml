@@ -114,3 +114,29 @@ functions:
       Application: ${self:custom.APPLICATION}
     layers:
       - !Ref UtilsLayerLambdaLayer 
+  ProcessResultsFunction:
+    name: ${self:custom.STAGE}-ProcessResultsFunction
+    runtime: nodejs18.x
+    handler: './controllers/upload_results.handler'
+    role: 
+      Fn::Sub:
+        - ${ARN}
+        - ARN: ${self:custom.ROLES.TESTROLE}
+    package:
+      patterns:
+        - 'controllers/**'
+        - 'layers/**'
+        - 'services/*'
+        - '!layers/utils/nodejs/node18/node_modules/@AwsHelpers/node_modules/**'
+        - '!layers/utils/nodejs/node18/node_modules/@Helpers/node_modules/**'
+    events:
+      - http:
+          path: '/process-results'
+          method: 'post'
+          cors: true
+    environment:
+      Stage: ${self:custom.STAGE}
+      Region: ${self:custom.REGION}
+      Application: ${self:custom.APPLICATION}
+    layers:
+      - !Ref UtilsLayerLambdaLayer 
