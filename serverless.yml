@@ -54,7 +54,67 @@ resources:
               - ${STAGE}-AutomateQueue
               - STAGE: ${self:custom.STAGE}
           VisibilityTimeout: 300
-
+    MyNewStepFunction:
+      Type: AWS::StepFunctions::StateMachine
+      Properties:
+        Definition:
+          Comment: 'A state machine for text blur'
+          StartAt: 'Step1'
+          States:
+            Step1:
+              Type: 'Task'
+              Resource: 
+                Fn::Sub: 
+                  - arn:aws:lambda:${REGION}:${ACCOUNT_ID}:function:dev-RouteSubmitForAutomation
+                  - REGION: ${self:custom.REGION}
+                    ACCOUNT_ID: ${self:custom.ACCOUNT_ID}
+              Catch:
+                - ErrorEquals:
+                    - States.ALL
+                  Next: ErrorHandleFN
+              Next: StatusCheck
+            StatusCheck:
+              Type: 'Task'
+              Resource: 
+                Fn::Sub: 
+                  - arn:aws:lambda:${REGION}:${ACCOUNT_ID}:function:dev-CheckVideoIntelligenceStatus
+                  - REGION: ${self:custom.REGION}
+                    ACCOUNT_ID: ${self:custom.ACCOUNT_ID}
+              Catch:
+                - ErrorEquals:
+                    - States.ALL
+                  Next: ErrorHandleFN
+              Next: CheckStatusStep
+            WaitStep:
+              Type: 'Wait'
+              Seconds: 10
+              Next: StatusCheck
+            CheckStatusStep:
+              Type: 'Choice'
+              Choices:
+                - Variable: $.status
+                  BooleanEquals: true
+                  Next: ProcessResultsStep
+              Default: WaitStep
+            ProcessResultsStep:
+              Type: 'Task'
+              Resource: 
+                Fn::Sub: 
+                  - arn:aws:lambda:${REGION}:${ACCOUNT_ID}:function:dev-ProcessResultsFunction
+                  - REGION: ${self:custom.REGION}
+                    ACCOUNT_ID: ${self:custom.ACCOUNT_ID}
+              Catch:
+                - ErrorEquals:
+                    - States.ALL
+                  Next: ErrorHandleFN
+              Next: Success
+            Success:
+              Type: 'Pass'
+              End: true
+            ErrorHandleFN:
+              Type: 'Pass'
+              End: true
+            
 
 
 functions:

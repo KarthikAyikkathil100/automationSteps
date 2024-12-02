@@ -45,10 +45,10 @@ const handler = async (event, context, callback) => {
             },
             UpdateExpression: 'set #textBlurJsonFileNameCol = :val',
             ExpressionAttributeNames: {
-                '#textBlurJsonFileNam': 'textBlurJsonFileName',
+                '#textBlurJsonFileNameCol': 'textBlurJsonFileName',
             },
             ExpressionAttributeValues: {
-                ':val': `textBlurFile/${fileName}`
+                ':val': `textBlurFile/${fileName}.json`
             },
         };
         await dynamoConnection.update(updatedParams).promise();
@@ -59,7 +59,7 @@ const handler = async (event, context, callback) => {
         console.log(e)
         return responses.errorResponseWithoutData(
             callback,
-            messages.INTERNAL_SERVER_ERROR
+            'INTERNAL_SERVER_ERROR'
           );
     }
 }
