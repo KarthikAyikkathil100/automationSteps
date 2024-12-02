@@ -6,11 +6,38 @@ const { dynamoConnection } = require('@AwsHelpers/DynamoDB/index.js')
 const handler = async (event, context, callback) => {
     try {
         const reqBody = event;
-        const fileName = reqBody.file_name
         const routeId = reqBody.route_id
+        const query = {
+            TableName: 'dev-Routes',
+            Key: {
+              id: routeId,
+            },
+            ProjectionExpression: 'id, videoURL'
+        }
 
-        await processResults(fileName)
+        const routeDataRaw = await dynamoConnection.get(query).promise()
+        if (!routeDataRaw || !routeDataRaw?.Item || Object.keys(routeDataRaw?.Item) === 0) {
+            return responses.errorResponseWithoutData(
+                callback,
+                'Route data not found',
+                0,
+                404
+            );    
+        }
 
+        const videoUrl = routeDataRaw?.Item?.videoURL;
+        if (!videoUrl) {
+            return responses.errorResponseWithoutData(
+                callback,
+                'Video URL not found',
+                0,
+                404
+            );    
+        }
+        const splits = videoUrl.split('/')
+        const fileName = splits[splits.length - 1]
+        
+        await processResults(`${fileName}.json`)
         const updatedParams = {
             TableName: 'dev-Routes',
             Key: {
@@ -23,8 +50,9 @@ const handler = async (event, context, callback) => {
             ExpressionAttributeValues: {
                 ':val': `textBlurFile/${fileName}`
             },
-          };
-          await dynamoConnection.update(updatedParams).promise();
+        };
+        await dynamoConnection.update(updatedParams).promise();
+
         return responses.successResponseData(callback, {code: 1})
     } catch (e) { 
         console.log('Error while checking job status')

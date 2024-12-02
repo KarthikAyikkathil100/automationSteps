@@ -10,13 +10,13 @@ const handler = async (event, context, callback) => {
         const jobId = reqBody.job_id
         const fileName = reqBody.file_name
         const status = await checkStatus(jobId)
-        if (status) {
-            await processResults(fileName)
-            let convertDSObj = convertDS(`/tmp/${fileName}`)
-            if (!convertDSObj) convertDSObj = {}
-            // await uploadFile(Buffer.from(JSON.stringify(convertDSObj)), 'media.demo.test', `textBlurFile/${fileName}`, 'application/json')
-            // console.log(convertDSObj)
-        }
+        // if (status) {
+        //     await processResults(fileName)
+        //     let convertDSObj = convertDS(`/tmp/${fileName}`)
+        //     if (!convertDSObj) convertDSObj = {}
+        //     // await uploadFile(Buffer.from(JSON.stringify(convertDSObj)), 'media.demo.test', `textBlurFile/${fileName}`, 'application/json')
+        //     // console.log(convertDSObj)
+        // }
         console.log('Status of Job => ', status)
         return responses.successResponseData(callback, {
             status
