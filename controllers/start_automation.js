@@ -11,9 +11,12 @@ const path = require('path');
 // TODO: Delte the file from local system
 const handler = async (event, context, callback) => {
   console.log('event => ', event);
+  let fileName = null
   try {
     const routeId = event.route_id
-    const jobId = await handleRoute(event.route_id)
+    const meta = await handleRoute(event.route_id)
+    const jobId = meta.jobId;
+    fileName = meta.fileName
     console.log('DONE --')
     return callback(null, {
       route_id: routeId,
@@ -27,6 +30,14 @@ const handler = async (event, context, callback) => {
       0,
       500
     );
+  } finally {
+    // Remove file from ephermal storage
+    if (fileName !== null && fs.existsSync(`/tmp/${fileName}`)) {
+      fs.unlinkSync(`/tmp/${fileName}`);
+      console.log(`Removed the file /tmp/${fileName}`);
+    } else {
+        console.log(`Sorry, file /tmp/${fileName} does not exist.`);
+    }
   }
 };
 
@@ -63,7 +74,10 @@ async function handleRoute(routeId) {
     if (!jobId) {
       throw new Error('Job id not found')
     }
-    return jobId
+    return {
+      jobId,
+      fileName
+    }
   } catch (e) {
     console.log('Error while handling route')
     console.log(e);

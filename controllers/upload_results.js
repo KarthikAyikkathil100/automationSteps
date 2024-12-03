@@ -2,8 +2,10 @@ const responses = require('@Helpers/responses');
 const { uploadFile } = require('@AwsHelpers/S3/index.js')
 const { dynamoConnection } = require('@AwsHelpers/DynamoDB/index.js')
 const { getCloudStorageClient, getVideoIntelligenceClient } = require('@Helpers/index.js')
+const fs = require('fs');
 // TODO: Delte the file from local system
 const handler = async (event, context, callback) => {
+    let storePath = null
     try {
         const reqBody = event;
         const routeId = reqBody.route_id
@@ -36,8 +38,8 @@ const handler = async (event, context, callback) => {
         }
         const splits = videoUrl.split('/')
         const fileName = splits[splits.length - 1]
-        
-        await processResults(`${fileName}.json`)
+        storePath = `${fileName}.json`
+        await processResults(storePath)
         const updatedParams = {
             TableName: 'dev-Routes',
             Key: {
@@ -65,7 +67,15 @@ const handler = async (event, context, callback) => {
             0,
             500
           );
-    }
+    } finally {
+        // Remove file from ephermal storage
+        if (storePath !== null && fs.existsSync(`/tmp/${storePath}`)) {
+            fs.unlinkSync(`/tmp/${storePath}`);
+            console.log(`Removed the file /tmp/${storePath}`);
+        } else {
+            console.log(`Sorry, file ${storePath} does not exist.`);
+        }
+        }
 }
 
 async function downloadFileFromGCS(bucketName, fileName, destFileName) {

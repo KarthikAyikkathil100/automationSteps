@@ -1,8 +1,8 @@
-const axios = require('axios')
+const { axios } = require('@Helpers/index.js')
 const axiosInstance = axios.create({
     baseURL: `${process.env.baseURL}`,
     timeout: 5000,
-  });
+});
 
 const handler = async (event, context, callback) => {
     console.log('event => ', event);
