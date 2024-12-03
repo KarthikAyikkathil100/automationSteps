@@ -6,27 +6,23 @@ const { getCloudStorageClient, getVideoIntelligenceClient } = require('@Helpers/
 // TODO: Delte the file from local system
 const handler = async (event, context, callback) => {
     try {
-        const reqBody = event;
-        const jobId = reqBody.job_id
-        const fileName = reqBody.file_name
+        const jobId = event.job_id
+        const route_id = event.route_id
         const status = await checkStatus(jobId)
-        // if (status) {
-        //     await processResults(fileName)
-        //     let convertDSObj = convertDS(`/tmp/${fileName}`)
-        //     if (!convertDSObj) convertDSObj = {}
-        //     // await uploadFile(Buffer.from(JSON.stringify(convertDSObj)), 'media.demo.test', `textBlurFile/${fileName}`, 'application/json')
-        //     // console.log(convertDSObj)
-        // }
         console.log('Status of Job => ', status)
-        return responses.successResponseData(callback, {
-            status
+        return callback(null, {
+            status,
+            route_id,
+            job_id: jobId,
         })
     } catch (e) { 
         console.log('Error while checking job status')
         console.log(e)
         return responses.errorResponseWithoutData(
             callback,
-            messages.INTERNAL_SERVER_ERROR
+            'INTERNAL_SERVER_ERROR',
+            0,
+            500
           );
     }
 }

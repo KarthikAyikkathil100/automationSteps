@@ -12,33 +12,20 @@ const path = require('path');
 const handler = async (event, context, callback) => {
   console.log('event => ', event);
   try {
-    const records = event.Records ?? [];
-    const failedRecords = [];
-    const allPromises = []
-    for (let i = 0; i < records.length; i++) {
-      const record = records[i];
-      const reqBody = JSON.parse(record.body);
-      console.log(reqBody)
-      // allPromises.push(axios.get('http://test-lb-2031587651.us-east-1.elb.amazonaws.com/test/v1'))
-      allPromises.push(handleRoute(reqBody.route_id))
-    }
-    const allRes = await Promise.allSettled(allPromises);
-    for (let i = 0; i < allRes.length; i++) {
-      const el = allRes[i]
-      if (el.status === 'rejected') {
-        failedRecords.push({
-          itemIdentifier: records[i].messageId,
-        });
-      }
-    }
-    return responses.successResponseData(callback, {
-      batchItemFailures: failedRecords,
-    });
+    const routeId = event.route_id
+    const jobId = await handleRoute(event.route_id)
+    console.log('DONE --')
+    return callback(null, {
+      route_id: routeId,
+      job_id: jobId
+    })
   } catch (e) {
     console.log(e);
     return responses.errorResponseWithoutData(
       callback,
-      messages.INTERNAL_SERVER_ERROR
+      'INTERNAL_SERVER_ERROR',
+      0,
+      500
     );
   }
 };
@@ -70,11 +57,13 @@ async function handleRoute(routeId) {
 
     const fileName = path.basename(videoUrl);
     await uploadVideoToGCS(`/tmp/${fileName}`, 'rtme-videos', fileName)
+    console.log('Video uploaded to GCS')
     const jobId = await submitTextDetectionjob('rtme-videos', fileName)
+    console.log('Submitted job to Google Video API')
     if (!jobId) {
       throw new Error('Job id not found')
     }
-    return "Success"
+    return jobId
   } catch (e) {
     console.log('Error while handling route')
     console.log(e);

@@ -53,13 +53,17 @@ const handler = async (event, context, callback) => {
         };
         await dynamoConnection.update(updatedParams).promise();
 
-        return responses.successResponseData(callback, {code: 1})
+        return callback(null, {
+            route_id: routeId
+        })
     } catch (e) { 
         console.log('Error while checking job status')
         console.log(e)
         return responses.errorResponseWithoutData(
             callback,
-            'INTERNAL_SERVER_ERROR'
+            'INTERNAL_SERVER_ERROR',
+            0,
+            500
           );
     }
 }
