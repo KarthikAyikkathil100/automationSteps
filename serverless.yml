@@ -183,6 +183,7 @@ resources:
                     - States.ALL
                   Next: ErrorHandleFN
               Next: StatusCheck
+              ResultPath: '$.google_info'
             StatusCheck:
               Type: 'Task'
               Resource: 
@@ -195,6 +196,7 @@ resources:
                     - States.ALL
                   Next: ErrorHandleFN
               Next: CheckStatusStep
+              ResultPath: '$.google_status'
             WaitStep:
               Type: 'Wait'
               Seconds: 10
@@ -202,7 +204,7 @@ resources:
             CheckStatusStep:
               Type: 'Choice'
               Choices:
-                - Variable: $.status
+                - Variable: $.google_status.status
                   BooleanEquals: true
                   Next: ProcessResultsStep
               Default: WaitStep
@@ -218,6 +220,7 @@ resources:
                     - States.ALL
                   Next: ErrorHandleFN
               Next: SubmitBlurRequestStep
+              ResultPath: '$.upload_res'
             WaitStepForBlurReq:
               Type: 'Wait'
               Seconds: 10
@@ -254,16 +257,17 @@ resources:
                     - States.ALL
                   Next: ErrorHandleFN
               Next: CheckTxtBlurStatusStep
+              ResultPath: '$.blur_status'
             CheckTxtBlurStatusStep:
               Type: 'Choice'
               Choices:
                 - And:
-                  - Variable: $.done
+                  - Variable: $.blur_status.done
                     BooleanEquals: true
-                  - Variable: $.error
+                  - Variable: $.blur_status.error
                     BooleanEquals: false
                   Next: Success
-                - Variable: $.error
+                - Variable: $.blur_status.error
                   BooleanEquals: true
                   Next: ErrorHandleFN
               Default: WaitForTxtBlurStep

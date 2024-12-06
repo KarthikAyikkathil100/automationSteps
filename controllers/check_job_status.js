@@ -6,7 +6,7 @@ const { getCloudStorageClient, getVideoIntelligenceClient } = require('@Helpers/
 // TODO: Delte the file from local system
 const handler = async (event, context, callback) => {
     try {
-        const jobId = event.job_id
+        const jobId = event.google_info.job_id
         const route_id = event.route_id
         const status = await checkStatus(jobId)
         console.log('Status of Job => ', status)
