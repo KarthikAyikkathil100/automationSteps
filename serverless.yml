@@ -234,6 +234,7 @@ resources:
                     - States.ALL
                   Next: ErrorHandleFN
               Next: CheckReqStatusStep
+              ResultPath: '$'
             CheckReqStatusStep:
               Type: 'Choice'
               Choices:

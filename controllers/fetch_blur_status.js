@@ -23,12 +23,11 @@ const handler = async (event, context, callback) => {
     } catch (e) { 
         console.log('Error while checking job status')
         console.log(e)
-        return responses.errorResponseWithoutData(
-            callback,
-            'INTERNAL_SERVER_ERROR',
-            0,
-            500
-          );
+        return callback(e, {
+            route_id,
+            done,
+            error
+        })
     }
 }
 
