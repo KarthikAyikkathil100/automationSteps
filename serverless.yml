@@ -266,15 +266,76 @@ resources:
                     BooleanEquals: true
                   - Variable: $.blur_status.error
                     BooleanEquals: false
-                  Next: Success
+                  Next: IfFaceBlurStep
                 - Variable: $.blur_status.error
                   BooleanEquals: true
                   Next: ErrorHandleFN
               Default: WaitForTxtBlurStep
+            IfFaceBlurStep:
+              Type: 'Choice'
+              Choices:
+                - Variable: $.face_blur
+                  BooleanEquals: true
+                  Next: FaceBlurReqSubmitStep
+              Default: Success
             WaitForTxtBlurStep:
               Type: 'Wait'
               Seconds: 10
               Next: FetchTxtBlurStatusStep
+            FaceBlurReqSubmitStep:
+              Type: 'Task'
+              Resource:
+                Fn::Sub: 
+                  - arn:aws:lambda:${REGION}:${ACCOUNT_ID}:function:dev-FaceBlurReqSubmitFunction
+                  - REGION: ${self:custom.REGION}
+                    ACCOUNT_ID: ${self:custom.ACCOUNT_ID}
+              Catch:
+                - ErrorEquals:
+                    - States.ALL
+                  Next: ErrorHandleFN
+              Next: CheckFaceBlurReqStatusStep
+              ResultPath: '$.face_blur_submit'
+            CheckFaceBlurReqStatusStep:
+              Type: 'Choice'
+              Choices:
+                - Variable: $.face_blur_submit.submitted
+                  BooleanEquals: true
+                  Next: FetchFaceBlurStatusStep
+              Default: WaitFaceBlurSubmitStep
+            WaitFaceBlurSubmitStep:
+              Type: 'Wait'
+              Seconds: 10
+              Next: FaceBlurReqSubmitStep
+            FetchFaceBlurStatusStep:
+              Type: 'Task'
+              Resource:
+                Fn::Sub: 
+                  - arn:aws:lambda:${REGION}:${ACCOUNT_ID}:function:dev-FetchFaceBlurStatusFunction
+                  - REGION: ${self:custom.REGION}
+                    ACCOUNT_ID: ${self:custom.ACCOUNT_ID}
+              Catch:
+                - ErrorEquals:
+                    - States.ALL
+                  Next: ErrorHandleFN
+              Next: CheckFaceBlurStatusStep
+              ResultPath: '$.face_blur_status'
+            CheckFaceBlurStatusStep:
+              Type: 'Choice'
+              Choices:
+                - And:
+                  - Variable: $.face_blur_status.done
+                    BooleanEquals: true
+                  - Variable: $.face_blur_status.error
+                    BooleanEquals: false
+                  Next: Success
+                - Variable: $.face_blur_status.error
+                  BooleanEquals: true
+                  Next: ErrorHandleFN
+              Default: WaitFaceBlurCompleteStatusStep
+            WaitFaceBlurCompleteStatusStep:
+              Type: 'Wait'
+              Seconds: 10
+              Next: FetchFaceBlurStatusStep
             Success:
               Type: 'Pass'
               End: true
@@ -396,6 +457,58 @@ functions:
     name: ${self:custom.STAGE}-FetchTxtBlurStatus
     runtime: nodejs18.x
     handler: './controllers/fetch_blur_status.handler'
+    role: 
+      Fn::Sub:
+        - ${ARN}
+        - ARN: ${self:custom.ROLES.TESTROLE}
+    package:
+      patterns:
+        - 'controllers/**'
+        - 'layers/**'
+        - 'services/*'
+        - '!layers/utils/nodejs/node18/node_modules/@AwsHelpers/node_modules/**'
+        - '!layers/utils/nodejs/node18/node_modules/@Helpers/node_modules/**'
+    events:
+      - http:
+          path: '/start-blur'
+          method: 'post'
+          cors: true
+    environment:
+      Stage: ${self:custom.STAGE}
+      Region: ${self:custom.REGION}
+      Application: ${self:custom.APPLICATION}
+    layers:
+      - !Ref UtilsLayerLambdaLayer 
+  FetchFaceBlurStatusFunction:
+    name: ${self:custom.STAGE}-FetchFaceBlurStatusFunction
+    runtime: nodejs18.x
+    handler: './controllers/face_blur_status.handler'
+    role: 
+      Fn::Sub:
+        - ${ARN}
+        - ARN: ${self:custom.ROLES.TESTROLE}
+    package:
+      patterns:
+        - 'controllers/**'
+        - 'layers/**'
+        - 'services/*'
+        - '!layers/utils/nodejs/node18/node_modules/@AwsHelpers/node_modules/**'
+        - '!layers/utils/nodejs/node18/node_modules/@Helpers/node_modules/**'
+    events:
+      - http:
+          path: '/start-blur'
+          method: 'post'
+          cors: true
+    environment:
+      Stage: ${self:custom.STAGE}
+      Region: ${self:custom.REGION}
+      Application: ${self:custom.APPLICATION}
+    layers:
+      - !Ref UtilsLayerLambdaLayer 
+  FaceBlurReqSubmitFunction:
+    name: ${self:custom.STAGE}-FaceBlurReqSubmitFunction
+    runtime: nodejs18.x
+    handler: './controllers/face_blur_submit.handler'
     role: 
       Fn::Sub:
         - ${ARN}
