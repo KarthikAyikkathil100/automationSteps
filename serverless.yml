@@ -54,33 +54,123 @@ resources:
               - ${STAGE}-AutomateQueue
               - STAGE: ${self:custom.STAGE}
           VisibilityTimeout: 300
-    StateMachineExecutionRole:
-      Type: AWS::IAM::Role
-      Properties:
-        AssumeRolePolicyDocument:
-          Version: "2012-10-17"
-          Statement:
-            - Effect: Allow
-              Principal:
-                Service:
-                  - states.amazonaws.com
-              Action: sts:AssumeRole
-        Policies:
-          - PolicyName: StateMachineExecutionPolicy
-            PolicyDocument:
-              Version: "2012-10-17"
-              Statement:
-                - Effect: Allow
-                  Action:
-                    - lambda:InvokeFunction
-                  Resource: "*"
-    MyNewStepFunction:
+    # StateMachineExecutionRole:
+    #   Type: AWS::IAM::Role
+    #   Properties:
+    #     AssumeRolePolicyDocument:
+    #       Version: "2012-10-17"
+    #       Statement:
+    #         - Effect: Allow
+    #           Principal:
+    #             Service:
+    #               - states.amazonaws.com
+    #           Action: sts:AssumeRole
+    #     Policies:
+    #       - PolicyName: StateMachineExecutionPolicy
+    #         PolicyDocument:
+    #           Version: "2012-10-17"
+    #           Statement:
+    #             - Effect: Allow
+    #               Action:
+    #                 - lambda:InvokeFunction
+    #               Resource: "*"
+    # MyNewStepFunction:
+    #   Type: AWS::StepFunctions::StateMachine
+    #   Properties:
+    #     Definition:
+    #       Comment: 'A state machine for text blur'
+    #       StartAt: 'Step1'
+    #       States:
+    #         Step1:
+    #           Type: 'Task'
+    #           Resource: 
+    #             Fn::Sub: 
+    #               - arn:aws:lambda:${REGION}:${ACCOUNT_ID}:function:dev-RouteSubmitForAutomation
+    #               - REGION: ${self:custom.REGION}
+    #                 ACCOUNT_ID: ${self:custom.ACCOUNT_ID}
+    #           Catch:
+    #             - ErrorEquals:
+    #                 - States.ALL
+    #               Next: ErrorHandleFN
+    #           Next: StatusCheck
+    #         StatusCheck:
+    #           Type: 'Task'
+    #           Resource: 
+    #             Fn::Sub: 
+    #               - arn:aws:lambda:${REGION}:${ACCOUNT_ID}:function:dev-CheckVideoIntelligenceStatus
+    #               - REGION: ${self:custom.REGION}
+    #                 ACCOUNT_ID: ${self:custom.ACCOUNT_ID}
+    #           Catch:
+    #             - ErrorEquals:
+    #                 - States.ALL
+    #               Next: ErrorHandleFN
+    #           Next: CheckStatusStep
+    #         WaitStep:
+    #           Type: 'Wait'
+    #           Seconds: 10
+    #           Next: StatusCheck
+    #         CheckStatusStep:
+    #           Type: 'Choice'
+    #           Choices:
+    #             - Variable: $.status
+    #               BooleanEquals: true
+    #               Next: ProcessResultsStep
+    #           Default: WaitStep
+    #         ProcessResultsStep:
+    #           Type: 'Task'
+    #           Resource: 
+    #             Fn::Sub: 
+    #               - arn:aws:lambda:${REGION}:${ACCOUNT_ID}:function:dev-ProcessResultsFunction
+    #               - REGION: ${self:custom.REGION}
+    #                 ACCOUNT_ID: ${self:custom.ACCOUNT_ID}
+    #           Catch:
+    #             - ErrorEquals:
+    #                 - States.ALL
+    #               Next: ErrorHandleFN
+    #           Next: SubmitBlurRequestStep
+    #         WaitStepForBlurReq:
+    #           Type: 'Wait'
+    #           Seconds: 10
+    #           Next: SubmitBlurRequestStep
+    #         SubmitBlurRequestStep:
+    #           Type: 'Task'
+    #           Resource: 
+    #             Fn::Sub: 
+    #               - arn:aws:lambda:${REGION}:${ACCOUNT_ID}:function:dev-StartTxtBlurFunction
+    #               - REGION: ${self:custom.REGION}
+    #                 ACCOUNT_ID: ${self:custom.ACCOUNT_ID}
+    #           Catch:
+    #             - ErrorEquals:
+    #                 - States.ALL
+    #               Next: ErrorHandleFN
+    #           Next: CheckReqStatusStep
+    #         CheckReqStatusStep:
+    #           Type: 'Choice'
+    #           Choices:
+    #             - Variable: $.submitted
+    #               BooleanEquals: true
+    #               Next: Success
+    #           Default: WaitStepForBlurReq
+    #         Success:
+    #           Type: 'Pass'
+    #           End: true
+    #         ErrorHandleFN:
+    #           Type: 'Pass'
+    #           End: true
+    #     RoleArn: !GetAtt StateMachineExecutionRole.Arn
+    AutomationStepFunction:
       Type: AWS::StepFunctions::StateMachine
       Properties:
         Definition:
-          Comment: 'A state machine for text blur'
-          StartAt: 'Step1'
+          Comment: 'Automation Flow'
+          StartAt: 'InitialChoice'
           States:
+            InitialChoice:
+              Type: 'Choice'
+              Choices:
+                - Variable: $.text_blur
+                  BooleanEquals: true
+                  Next: Step1
             Step1:
               Type: 'Task'
               Resource: 
@@ -149,8 +239,37 @@ resources:
               Choices:
                 - Variable: $.submitted
                   BooleanEquals: true
-                  Next: Success
+                  Next: FetchTxtBlurStatusStep
               Default: WaitStepForBlurReq
+            FetchTxtBlurStatusStep:
+              Type: 'Task'
+              Resource:
+                Fn::Sub: 
+                  - arn:aws:lambda:${REGION}:${ACCOUNT_ID}:function:dev-FetchTxtBlurStatus
+                  - REGION: ${self:custom.REGION}
+                    ACCOUNT_ID: ${self:custom.ACCOUNT_ID}
+              Catch:
+                - ErrorEquals:
+                    - States.ALL
+                  Next: ErrorHandleFN
+              Next: CheckTxtBlurStatusStep
+            CheckTxtBlurStatusStep:
+              Type: 'Choice'
+              Choices:
+                - AND:
+                  - Variable: $.done
+                    BooleanEquals: true
+                  - Variable: $.error
+                    BooleanEquals: false
+                  Next: Success
+                - Variable: $.error
+                  BooleanEquals: true
+                  Next: ErrorHandleFN
+              Default: WaitForTxtBlurStep
+            WaitForTxtBlurStep:
+              Type: 'Wait'
+              Seconds: 10
+              Next: FetchTxtBlurStatusStep
             Success:
               Type: 'Pass'
               End: true
@@ -158,7 +277,6 @@ resources:
               Type: 'Pass'
               End: true
         RoleArn: !GetAtt StateMachineExecutionRole.Arn
-
 
 functions:
   # Submit route for automation
@@ -247,6 +365,32 @@ functions:
     name: ${self:custom.STAGE}-StartTxtBlurFunction
     runtime: nodejs18.x
     handler: './controllers/start_blur_process.handler'
+    role: 
+      Fn::Sub:
+        - ${ARN}
+        - ARN: ${self:custom.ROLES.TESTROLE}
+    package:
+      patterns:
+        - 'controllers/**'
+        - 'layers/**'
+        - 'services/*'
+        - '!layers/utils/nodejs/node18/node_modules/@AwsHelpers/node_modules/**'
+        - '!layers/utils/nodejs/node18/node_modules/@Helpers/node_modules/**'
+    events:
+      - http:
+          path: '/start-blur'
+          method: 'post'
+          cors: true
+    environment:
+      Stage: ${self:custom.STAGE}
+      Region: ${self:custom.REGION}
+      Application: ${self:custom.APPLICATION}
+    layers:
+      - !Ref UtilsLayerLambdaLayer 
+  FetchTxtBlurStatus:
+    name: ${self:custom.STAGE}-FetchTxtBlurStatus
+    runtime: nodejs18.x
+    handler: './controllers/fetch_blur_status.handler'
     role: 
       Fn::Sub:
         - ${ARN}
