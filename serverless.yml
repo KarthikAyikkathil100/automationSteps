@@ -171,6 +171,12 @@ resources:
                 - Variable: $.text_blur
                   BooleanEquals: true
                   Next: Step1
+                - And:
+                  - Variable: $.text_blur
+                    BooleanEquals: false
+                  - Variable: $.face_blur
+                    BooleanEquals: true
+                  Next: FaceBlurReqSubmitStep
             Step1:
               Type: 'Task'
               Resource: 
