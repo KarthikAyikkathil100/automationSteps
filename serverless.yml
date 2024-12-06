@@ -234,11 +234,11 @@ resources:
                     - States.ALL
                   Next: ErrorHandleFN
               Next: CheckReqStatusStep
-              ResultPath: '$'
+              ResultPath: '$.res'
             CheckReqStatusStep:
               Type: 'Choice'
               Choices:
-                - Variable: $.submitted
+                - Variable: $.res.submitted
                   BooleanEquals: true
                   Next: FetchTxtBlurStatusStep
               Default: WaitStepForBlurReq
