@@ -54,26 +54,26 @@ resources:
               - ${STAGE}-AutomateQueue
               - STAGE: ${self:custom.STAGE}
           VisibilityTimeout: 300
-    # StateMachineExecutionRole:
-    #   Type: AWS::IAM::Role
-    #   Properties:
-    #     AssumeRolePolicyDocument:
-    #       Version: "2012-10-17"
-    #       Statement:
-    #         - Effect: Allow
-    #           Principal:
-    #             Service:
-    #               - states.amazonaws.com
-    #           Action: sts:AssumeRole
-    #     Policies:
-    #       - PolicyName: StateMachineExecutionPolicy
-    #         PolicyDocument:
-    #           Version: "2012-10-17"
-    #           Statement:
-    #             - Effect: Allow
-    #               Action:
-    #                 - lambda:InvokeFunction
-    #               Resource: "*"
+    StateMachineExecutionRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - states.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: StateMachineExecutionPolicy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - lambda:InvokeFunction
+                  Resource: "*"
     # MyNewStepFunction:
     #   Type: AWS::StepFunctions::StateMachine
     #   Properties:
