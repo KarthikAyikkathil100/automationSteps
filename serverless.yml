@@ -256,7 +256,7 @@ resources:
             CheckTxtBlurStatusStep:
               Type: 'Choice'
               Choices:
-                - AND:
+                - And:
                   - Variable: $.done
                     BooleanEquals: true
                   - Variable: $.error
