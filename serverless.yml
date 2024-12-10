@@ -177,6 +177,14 @@ resources:
                   - Variable: $.face_blur
                     BooleanEquals: true
                   Next: FaceBlurReqSubmitStep
+                - And:
+                  - Variable: $.text_blur
+                    BooleanEquals: false
+                  - Variable: $.face_blur
+                    BooleanEquals: false
+                  - Variable: $.direction_detection
+                    BooleanEquals: false
+                  Next: DirectionDetectionReqSubmitStep
             Step1:
               Type: 'Task'
               Resource: 
