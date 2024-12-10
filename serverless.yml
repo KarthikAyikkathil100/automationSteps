@@ -333,11 +333,72 @@ resources:
                     BooleanEquals: true
                   - Variable: $.face_blur_status.error
                     BooleanEquals: false
-                  Next: Success
+                  Next: IfDirectionDetectionStep
                 - Variable: $.face_blur_status.error
                   BooleanEquals: true
                   Next: ErrorHandleFN
               Default: WaitFaceBlurCompleteStatusStep
+            IfDirectionDetectionStep:
+              Type: 'Choice'
+              Choices:
+                - Variable: $.direction_detection
+                  BooleanEquals: true
+                  Next: DirectionDetectionReqSubmitStep
+              Default: Success
+            DirectionDetectionReqSubmitStep:
+              Type: 'Task'
+              Resource:
+                Fn::Sub: 
+                  - arn:aws:lambda:${REGION}:${ACCOUNT_ID}:function:dev-DirectionDetectionReqSubmitFunction
+                  - REGION: ${self:custom.REGION}
+                    ACCOUNT_ID: ${self:custom.ACCOUNT_ID}
+              Catch:
+                - ErrorEquals:
+                    - States.ALL
+                  Next: ErrorHandleFN
+              Next: CheckDirectionDetectionReqStatusStep
+              ResultPath: '$.direction_detection_req'
+            CheckDirectionDetectionReqStatusStep:
+              Type: 'Choice'
+              Choices:
+                - Variable: $.direction_detection_req.submitted
+                  BooleanEquals: true
+                  Next: FetchDirectionDetectionStatusStep
+              Default: WaitDirectionDetectionSubmitStep
+            WaitDirectionDetectionSubmitStep:
+              Type: 'Wait'
+              Seconds: 10
+              Next: DirectionDetectionReqSubmitStep
+            FetchDirectionDetectionStatusStep:
+              Type: 'Task'
+              Resource:
+                Fn::Sub: 
+                  - arn:aws:lambda:${REGION}:${ACCOUNT_ID}:function:dev-FetchDirectionDetectionStatusFunction
+                  - REGION: ${self:custom.REGION}
+                    ACCOUNT_ID: ${self:custom.ACCOUNT_ID}
+              Catch:
+                - ErrorEquals:
+                    - States.ALL
+                  Next: ErrorHandleFN
+              Next: CheckDirectionDetectionStatusStep
+              ResultPath: '$.direction_detection_step'
+            CheckDirectionDetectionStatusStep:
+              Type: 'Choice'
+              Choices:
+                - And:
+                  - Variable: $.direction_detection_step.done
+                    BooleanEquals: true
+                  - Variable: $.direction_detection_step.error
+                    BooleanEquals: false
+                  Next: Success
+                - Variable: $.direction_detection_step.error
+                  BooleanEquals: true
+                  Next: ErrorHandleFN
+              Default: WaitDirectionDetectionCompleteStatusStep
+            WaitDirectionDetectionCompleteStatusStep:
+              Type: 'Wait'
+              Seconds: 10
+              Next: FetchDirectionDetectionStatusStep
             WaitFaceBlurCompleteStatusStep:
               Type: 'Wait'
               Seconds: 10
@@ -502,7 +563,7 @@ functions:
         - '!layers/utils/nodejs/node18/node_modules/@Helpers/node_modules/**'
     events:
       - http:
-          path: '/start-blur'
+          path: '/face-blur-status'
           method: 'post'
           cors: true
     environment:
@@ -529,6 +590,58 @@ functions:
     events:
       - http:
           path: '/start-blur'
+          method: 'post'
+          cors: true
+    environment:
+      Stage: ${self:custom.STAGE}
+      Region: ${self:custom.REGION}
+      Application: ${self:custom.APPLICATION}
+    layers:
+      - !Ref UtilsLayerLambdaLayer
+  DirectionDetectionReqSubmitFunction:
+    name: ${self:custom.STAGE}-DirectionDetectionReqSubmitFunction
+    runtime: nodejs18.x
+    handler: './controllers/direction_detection_submit.handler'
+    role: 
+      Fn::Sub:
+        - ${ARN}
+        - ARN: ${self:custom.ROLES.TESTROLE}
+    package:
+      patterns:
+        - 'controllers/**'
+        - 'layers/**'
+        - 'services/*'
+        - '!layers/utils/nodejs/node18/node_modules/@AwsHelpers/node_modules/**'
+        - '!layers/utils/nodejs/node18/node_modules/@Helpers/node_modules/**'
+    events:
+      - http:
+          path: '/direction-detection'
+          method: 'post'
+          cors: true
+    environment:
+      Stage: ${self:custom.STAGE}
+      Region: ${self:custom.REGION}
+      Application: ${self:custom.APPLICATION}
+    layers:
+      - !Ref UtilsLayerLambdaLayers 
+  FetchDirectionDetectionStatusFunction:
+    name: ${self:custom.STAGE}-FetchDirectionDetectionStatusFunction
+    runtime: nodejs18.x
+    handler: './controllers/direction_detection_status.handler'
+    role: 
+      Fn::Sub:
+        - ${ARN}
+        - ARN: ${self:custom.ROLES.TESTROLE}
+    package:
+      patterns:
+        - 'controllers/**'
+        - 'layers/**'
+        - 'services/*'
+        - '!layers/utils/nodejs/node18/node_modules/@AwsHelpers/node_modules/**'
+        - '!layers/utils/nodejs/node18/node_modules/@Helpers/node_modules/**'
+    events:
+      - http:
+          path: '/direction-detection-status'
           method: 'post'
           cors: true
     environment:
