@@ -623,7 +623,7 @@ functions:
       Region: ${self:custom.REGION}
       Application: ${self:custom.APPLICATION}
     layers:
-      - !Ref UtilsLayerLambdaLayers 
+      - !Ref UtilsLayerLambdaLayer
   FetchDirectionDetectionStatusFunction:
     name: ${self:custom.STAGE}-FetchDirectionDetectionStatusFunction
     runtime: nodejs18.x
@@ -649,4 +649,4 @@ functions:
       Region: ${self:custom.REGION}
       Application: ${self:custom.APPLICATION}
     layers:
-      - !Ref UtilsLayerLambdaLayers
+      - !Ref UtilsLayerLambdaLayer
