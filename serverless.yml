@@ -185,6 +185,16 @@ resources:
                   - Variable: $.direction_detection
                     BooleanEquals: true
                   Next: DirectionDetectionReqSubmitStep
+                - And:
+                  - Variable: $.text_blur
+                    BooleanEquals: false
+                  - Variable: $.face_blur
+                    BooleanEquals: false
+                  - Variable: $.direction_detection
+                    BooleanEquals: false
+                  - Variable: $.arrow_attach
+                    BooleanEquals: false
+                  Next: ArrowAttachReqSubmitStep
             Step1:
               Type: 'Task'
               Resource: 
@@ -411,6 +421,60 @@ resources:
               Type: 'Wait'
               Seconds: 10
               Next: FetchFaceBlurStatusStep
+            ArrowAttachReqSubmitStep:
+              Type: 'Task'
+              Resource:
+                Fn::Sub: 
+                  - arn:aws:lambda:${REGION}:${ACCOUNT_ID}:function:dev-ArrowAttachReqSubmitFunction
+                  - REGION: ${self:custom.REGION}
+                    ACCOUNT_ID: ${self:custom.ACCOUNT_ID}
+              Catch:
+                - ErrorEquals:
+                    - States.ALL
+                  Next: ErrorHandleFN
+              Next: CheckArrowAttachReqStatusStep
+              ResultPath: '$.arrow_attch_req'
+            CheckArrowAttachReqStatusStep:
+              Type: 'Choice'
+              Choices:
+                - Variable: $.arrow_attch_req.submitted
+                  BooleanEquals: true
+                  Next: FetchArrowAttachStatusStep
+              Default: WaitArrowAttachSubmitStep
+            WaitArrowAttachSubmitStep:
+              Type: 'Wait'
+              Seconds: 10
+              Next: ArrowAttachReqSubmitStep
+            FetchArrowAttachStatusStep:
+              Type: 'Task'
+              Resource:
+                Fn::Sub: 
+                  - arn:aws:lambda:${REGION}:${ACCOUNT_ID}:function:dev-FetchArrowAttachStatusFunction
+                  - REGION: ${self:custom.REGION}
+                    ACCOUNT_ID: ${self:custom.ACCOUNT_ID}
+              Catch:
+                - ErrorEquals:
+                    - States.ALL
+                  Next: ErrorHandleFN
+              Next: CheckArrowAttachStatusStep
+              ResultPath: '$.arrow_attch_status'
+            CheckArrowAttachStatusStep:
+              Type: 'Choice'
+              Choices:
+                - And:
+                  - Variable: $.arrow_attch_status.done
+                    BooleanEquals: true
+                  - Variable: $.arrow_attch_status.error
+                    BooleanEquals: false
+                  Next: Success
+                - Variable: $.arrow_attch_status.error
+                  BooleanEquals: true
+                  Next: ErrorHandleFN
+              Default: WaitArrowAttachCompleteStatusStep
+            WaitArrowAttachCompleteStatusStep:
+              Type: 'Wait'
+              Seconds: 10
+              Next: FetchArrowAttachStatusStep
             Success:
               Type: 'Pass'
               End: true
@@ -650,6 +714,58 @@ functions:
     events:
       - http:
           path: '/direction-detection-status'
+          method: 'post'
+          cors: true
+    environment:
+      Stage: ${self:custom.STAGE}
+      Region: ${self:custom.REGION}
+      Application: ${self:custom.APPLICATION}
+    layers:
+      - !Ref UtilsLayerLambdaLayer
+  ArrowAttachReqSubmitFunction:
+    name: ${self:custom.STAGE}-ArrowAttachReqSubmitFunction
+    runtime: nodejs18.x
+    handler: './controllers/arrow_attach_submit.handler'
+    role: 
+      Fn::Sub:
+        - ${ARN}
+        - ARN: ${self:custom.ROLES.TESTROLE}
+    package:
+      patterns:
+        - 'controllers/**'
+        - 'layers/**'
+        - 'services/*'
+        - '!layers/utils/nodejs/node18/node_modules/@AwsHelpers/node_modules/**'
+        - '!layers/utils/nodejs/node18/node_modules/@Helpers/node_modules/**'
+    events:
+      - http:
+          path: '/arrow-attach'
+          method: 'post'
+          cors: true
+    environment:
+      Stage: ${self:custom.STAGE}
+      Region: ${self:custom.REGION}
+      Application: ${self:custom.APPLICATION}
+    layers:
+      - !Ref UtilsLayerLambdaLayer
+  FetchArrowAttachStatusFunction:
+    name: ${self:custom.STAGE}-FetchArrowAttachStatusFunction
+    runtime: nodejs18.x
+    handler: './controllers/arrow_attach_status.handler'
+    role: 
+      Fn::Sub:
+        - ${ARN}
+        - ARN: ${self:custom.ROLES.TESTROLE}
+    package:
+      patterns:
+        - 'controllers/**'
+        - 'layers/**'
+        - 'services/*'
+        - '!layers/utils/nodejs/node18/node_modules/@AwsHelpers/node_modules/**'
+        - '!layers/utils/nodejs/node18/node_modules/@Helpers/node_modules/**'
+    events:
+      - http:
+          path: '/arrow-attch-status'
           method: 'post'
           cors: true
     environment:
