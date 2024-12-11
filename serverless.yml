@@ -193,7 +193,7 @@ resources:
                   - Variable: $.direction_detection
                     BooleanEquals: false
                   - Variable: $.arrow_attach
-                    BooleanEquals: false
+                    BooleanEquals: true
                   Next: ArrowAttachReqSubmitStep
             Step1:
               Type: 'Task'
