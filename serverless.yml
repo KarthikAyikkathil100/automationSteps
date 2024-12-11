@@ -183,7 +183,7 @@ resources:
                   - Variable: $.face_blur
                     BooleanEquals: false
                   - Variable: $.direction_detection
-                    BooleanEquals: false
+                    BooleanEquals: true
                   Next: DirectionDetectionReqSubmitStep
             Step1:
               Type: 'Task'
